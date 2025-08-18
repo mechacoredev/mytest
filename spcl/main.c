@@ -21,8 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "RC522.h"
 #include "string.h"
+#include "rc522deneme.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,24 +43,24 @@
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi3;
 
-UART_HandleTypeDef huart2;
-
 /* USER CODE BEGIN PV */
+RC522_t myrc522;
 uint8_t status;
-uint8_t str[16];
-uint8_t sNum[5];
-char *msg1 = "Reading From Card\r\n";
-char *msg2 = "Reading From Tag\r\n";
-char *msg3 = "Place card to read\r\n";
-uint8_t msgmain[21];
-uint8_t countblue=0;
-uint8_t countwhite=0;
+uint8_t card_uid[5]; // UID'yi saklamak için
+uint8_t card_type[2]; // Kart tipini saklamak için
+uint8_t card_size;
+uint8_t keyA[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+uint8_t block_to_read = 4; // Örnek olarak 4. bloğu okuyalım
+uint8_t block_data[16];
+uint8_t i;
+int16_t count=0;
+uint8_t data_to_write[16] = "Enes Was Here :)";
+uint8_t counter=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_USART2_UART_Init(void);
 static void MX_SPI3_Init(void);
 /* USER CODE BEGIN PFP */
 
@@ -100,32 +100,58 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_USART2_UART_Init();
   MX_SPI3_Init();
   /* USER CODE BEGIN 2 */
-  MFRC522_Init();
+  _RC522_Init(&myrc522, &hspi3, CS_GPIO_Port, CS_Pin, RST_GPIO_Port, RST_Pin, 1000);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
+  /* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
-	  status=MFRC522_Request(PICC_REQIDL, str);
-	  status=MFRC522_Anticoll(str);
-	  memcpy(sNum,str,5);
+  /* USER CODE BEGIN 3 */
+  memset(card_type, 0, 2);
+  memset(card_uid, 0, 5);
+  card_size=0;
+  _RC522_StopCrpyo1(&myrc522); // oturumu sonlandırmak için, yoksa yeni kartları göremeyiz
+  status = _RC522_Request(&myrc522, PICC_REQIDL, card_type);
+  if(status!=MI_OK) continue;
+  status = _RC522_Anticoll(&myrc522, card_uid);
+  if(status!=MI_OK) continue;
+  if((card_uid[0]==193) && (card_uid[1]==99) && (card_uid[2]==247) && (card_uid[3]==3) && (card_uid[4]==86))
+  {
+  count++; // 2 farklı kartı anlamayı kolaylaştırmak için
+  card_size = _RC522_SelectTag(&myrc522, card_uid);
+  if(card_size==0) continue;
+  status=_RC522_Auth(&myrc522, PICC_AUTHENT1A, block_to_read, keyA, card_uid);
+  if(status!=MI_OK) continue;
+  if(counter==0){
+	  counter++;
+	  _RC522_Write(&myrc522, block_to_read, data_to_write);
+  }
+  status=_RC522_Read(&myrc522, block_to_read, block_data);
+  if(status!=MI_OK) continue;
+  _RC522_Halt(&myrc522);
+  }
 
-		if((str[0]==193) && (str[1]==99) && (str[2]==247) && (str[3]==3) && (str[4]==86) )
-		 {
-			countwhite++;
-		   }
-
-		if((str[0]==162) && (str[1]==98) && (str[2]==192) && (str[3]==1) && (str[4]==1) )
-			 {
-			countblue++;
-			   }
+  if((card_uid[0]==162) && (card_uid[1]==98) && (card_uid[2]==192) && (card_uid[3]==1) && (card_uid[4]==1))
+  {
+  count--; // 2 farklı kartı anlamayı kolaylaştırmak için
+  card_size = _RC522_SelectTag(&myrc522, card_uid);
+  if(card_size==0) continue;
+  status=_RC522_Auth(&myrc522, PICC_AUTHENT1A, block_to_read, keyA, card_uid);
+  if(status!=MI_OK) continue;
+  if(counter==0){
+	  counter++;
+	  _RC522_Write(&myrc522, block_to_read, data_to_write);
+  }
+  status=_RC522_Read(&myrc522, block_to_read, block_data);
+  if(status!=MI_OK) continue;
+  _RC522_Halt(&myrc522);
+  }
+  HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }
@@ -211,39 +237,6 @@ static void MX_SPI3_Init(void)
   /* USER CODE BEGIN SPI3_Init 2 */
 
   /* USER CODE END SPI3_Init 2 */
-
-}
-
-/**
-  * @brief USART2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART2_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART2_Init 0 */
-
-  /* USER CODE END USART2_Init 0 */
-
-  /* USER CODE BEGIN USART2_Init 1 */
-
-  /* USER CODE END USART2_Init 1 */
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART2_Init 2 */
-
-  /* USER CODE END USART2_Init 2 */
 
 }
 
