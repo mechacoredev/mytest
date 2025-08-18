@@ -52,10 +52,12 @@ uint8_t card_size;
 uint8_t keyA[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 uint8_t block_to_read = 4; // Örnek olarak 4. bloğu okuyalım
 uint8_t block_data[16];
+uint8_t block_data2[16];
 uint8_t i;
-int16_t count=0;
+int16_t counter=0;
 uint8_t data_to_write[16] = "Enes Was Here :)";
-uint8_t counter=0;
+uint8_t data_to_write2[16] = "Sene Was Here :)";
+uint8_t counter2=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -112,46 +114,43 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-  memset(card_type, 0, 2);
-  memset(card_uid, 0, 5);
-  card_size=0;
-  _RC522_StopCrpyo1(&myrc522); // oturumu sonlandırmak için, yoksa yeni kartları göremeyiz
-  status = _RC522_Request(&myrc522, PICC_REQIDL, card_type);
-  if(status!=MI_OK) continue;
-  status = _RC522_Anticoll(&myrc522, card_uid);
-  if(status!=MI_OK) continue;
-  if((card_uid[0]==193) && (card_uid[1]==99) && (card_uid[2]==247) && (card_uid[3]==3) && (card_uid[4]==86))
-  {
-  count++; // 2 farklı kartı anlamayı kolaylaştırmak için
-  card_size = _RC522_SelectTag(&myrc522, card_uid);
-  if(card_size==0) continue;
-  status=_RC522_Auth(&myrc522, PICC_AUTHENT1A, block_to_read, keyA, card_uid);
-  if(status!=MI_OK) continue;
-  if(counter==0){
-	  counter++;
-	  _RC522_Write(&myrc522, block_to_read, data_to_write);
-  }
-  status=_RC522_Read(&myrc522, block_to_read, block_data);
-  if(status!=MI_OK) continue;
-  _RC522_Halt(&myrc522);
-  }
-
-  if((card_uid[0]==162) && (card_uid[1]==98) && (card_uid[2]==192) && (card_uid[3]==1) && (card_uid[4]==1))
-  {
-  count--; // 2 farklı kartı anlamayı kolaylaştırmak için
-  card_size = _RC522_SelectTag(&myrc522, card_uid);
-  if(card_size==0) continue;
-  status=_RC522_Auth(&myrc522, PICC_AUTHENT1A, block_to_read, keyA, card_uid);
-  if(status!=MI_OK) continue;
-  if(counter==0){
-	  counter++;
-	  _RC522_Write(&myrc522, block_to_read, data_to_write);
-  }
-  status=_RC522_Read(&myrc522, block_to_read, block_data);
-  if(status!=MI_OK) continue;
-  _RC522_Halt(&myrc522);
-  }
-  HAL_Delay(10);
+	  HAL_Delay(100);
+	  memset(card_type, 0, 2);
+	  memset(card_uid, 0, 5);
+	  card_size=0;
+	  _RC522_StopCrpyo1(&myrc522); // oturumu sonlandırmak için, yoksa yeni kartları göremeyiz
+	  status = _RC522_Request(&myrc522, PICC_REQIDL, card_type);
+	  if(status!=MI_OK) continue;
+	  status = _RC522_Anticoll(&myrc522, card_uid);
+	  if(status!=MI_OK) continue;
+	  if(((card_uid[0]==193) && (card_uid[1]==99) && (card_uid[2]==247) && (card_uid[3]==3) && (card_uid[4]==86)))
+	  {
+		  card_size = _RC522_SelectTag(&myrc522, card_uid);
+		  if(card_size==0) continue;
+		  status=_RC522_Auth(&myrc522, PICC_AUTHENT1A, block_to_read, keyA, card_uid);
+		  if(status!=MI_OK) continue;
+		  if(counter==0){
+			  counter++;
+			  _RC522_Write(&myrc522, block_to_read, data_to_write);
+		  }
+		  status=_RC522_Read(&myrc522, block_to_read, block_data);
+		  if(status!=MI_OK) continue;
+		  _RC522_Halt(&myrc522);
+	  }
+	  if(((card_uid[0]==162) && (card_uid[1]==98) && (card_uid[2]==192) && (card_uid[3]==1) && (card_uid[4]==1)))
+	  {
+		  card_size = _RC522_SelectTag(&myrc522, card_uid);
+		  if(card_size==0) continue;
+		  status=_RC522_Auth(&myrc522, PICC_AUTHENT1A, block_to_read, keyA, card_uid);
+		  if(status!=MI_OK) continue;
+		  if(counter2==0){
+			  counter2++;
+			  _RC522_Write(&myrc522, block_to_read, data_to_write2);
+		  }
+		  status=_RC522_Read(&myrc522, block_to_read, block_data2);
+		  if(status!=MI_OK) continue;
+		  _RC522_Halt(&myrc522);
+	  }
   }
   /* USER CODE END 3 */
 }
