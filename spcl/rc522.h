@@ -1,26 +1,15 @@
+/*
+ * rc522deneme.h
+ *
+ *  Created on: Aug 16, 2025
+ *      Author: Enes
+ */
+
+#ifndef INC_RC522DENEME_H_
+#define INC_RC522DENEME_H_
+
 #include "stm32f4xx_hal.h"
-
-#define	uchar	unsigned char
-#define	uint	unsigned int
-extern SPI_HandleTypeDef hspi3;
-
-//Maximum length of the array
-#define MAX_LEN 16
-
-#define HSPI_INSTANCE				&hspi3
-#define MFRC522_CS_PORT				GPIOD
-#define MFRC522_CS_PIN				GPIO_PIN_0
-#define MFRC522_RST_PORT			GPIOC
-#define MFRC522_RST_PIN				GPIO_PIN_15
-
-// MFRC522 commands. Described in chapter 10 of the datasheet.
-#define PCD_IDLE              0x00               // no action, cancels current command execution
-#define PCD_AUTHENT           0x0E               // performs the MIFARE standard authentication as a reader
-#define PCD_RECEIVE           0x08               // activates the receiver circuits
-#define PCD_TRANSMIT          0x04               // transmits data from the FIFO buffer
-#define PCD_TRANSCEIVE        0x0C               // transmits data from FIFO buffer to antenna and automatically activates the receiver after transmission
-#define PCD_RESETPHASE        0x0F               // resets the MFRC522
-#define PCD_CALCCRC           0x03               // activates the CRC coprocessor or performs a self-test
+#include "stdbool.h"
 
 // Commands sent to the PICC.
 #define PICC_REQIDL           0x26               // REQuest command, Type A. Invites PICCs in state IDLE to go to READY and prepare for anticollision or selection. 7 bit frame.
@@ -37,90 +26,120 @@ extern SPI_HandleTypeDef hspi3;
 #define PICC_TRANSFER         0xB0               // Writes the contents of the internal data register to a block.
 #define PICC_HALT             0x50               // HaLT command, Type A. Instructs an ACTIVE PICC to go to state HALT.
 
+typedef enum{
+	MI_OK=0,
+	MI_NOTAGERR,
+	MI_ERROR,
+}RC522_Return_Status_t;
 
-// Success or error code is returned when communication
-#define MI_OK                 0
-#define MI_NOTAGERR           1
-#define MI_ERR                2
+typedef enum{
+	PCD_IDLE=0,
+	PCD_MEM,
+	PCD_RNG,
+	PCD_CALC_CRC,
+	PCD_TRANSMIT,
+	PCD_NO_CMD_CHANGE=7,
+	PCD_RECEIVE,
+	PCD_TRANSCEIVE=12,
+	PCD_MFAUTHENT=14,
+	PCD_SOFTRESET=15,
+}RC522_Commands_t;
 
+typedef enum{
+	// Page 0: Command and status
+	REG_Reserved0=0,
+	REG_CommandReg,
+	REG_ComlEnReg,
+	REG_DivlEnReg,
+	REG_ComIrqReg,
+	REG_DivIrqReg,
+	REG_ErrorReg,
+	REG_Status1Reg,
+	REG_Status2Reg,
+	REG_FIFODataReg,
+	REG_FIFOLevelReg,
+	REG_WaterLevelReg,
+	REG_ControlReg,
+	REG_BitFramingReg,
+	REG_CollReg,
+	REG_Reserved1,
+	// Page 1: Command
+	REG_Reserved2,
+	REG_ModeReg,
+	REG_TxModeReg,
+	REG_RxModeReg,
+	REG_TxControlReg,
+	REG_TxASKReg,
+	REG_TxSelReg,
+	REG_RxSelReg,
+	REG_RxThresholdReg,
+	REG_DemodReg,
+	REG_Reserved3,
+	REG_Reserved4,
+	REG_MfTxReg,
+	REG_MfRxReg,
+	REG_Reserved5,
+	REG_SerialSpeedReg,
+	// Page 2: Configuration
+	REG_Reserved6,
+	REG_CRCResultReg_MSB,
+	REG_CRCResultReg_LSB,
+	REG_Reserved7,
+	REG_ModWidthReg,
+	REG_Reserved8,
+	REG_RFCfgReg,
+	REG_GsNReg,
+	REG_CWGsPReg,
+	REG_ModGsPReg,
+	REG_TModeReg,
+	REG_TPrescalerReg,
+	REG_TReloadReg_MSB,
+	REG_TReloadReg_LSB,
+	REG_TCounterValReg_MSB,
+	REG_TCounterValReg_LSB,
+	// Page 3: Test register
+	REG_Reserved9,
+	REG_TestSel1Reg,
+	REG_TestSel2Reg,
+	REG_TestPinEnReg,
+	REG_TestPinValueReg,
+	REG_TestBusReg,
+	REG_AutoTestReg,
+	REG_VersionReg,
+	REG_AnalogTestReg,
+	REG_TestDAC1Reg,
+	REG_TestDAC2Reg,
+	REG_TestADCReg
+}RC522_Register_Addr_t;
 
-// MFRC522 registers. Described in chapter 9 of the datasheet.
-// Page 0: Command and Status
-#define     Reserved00            0x00
-#define     CommandReg            0x01
-#define     CommIEnReg            0x02
-#define     DivlEnReg             0x03
-#define     CommIrqReg            0x04
-#define     DivIrqReg             0x05
-#define     ErrorReg              0x06
-#define     Status1Reg            0x07
-#define     Status2Reg            0x08
-#define     FIFODataReg           0x09
-#define     FIFOLevelReg          0x0A
-#define     WaterLevelReg         0x0B
-#define     ControlReg            0x0C
-#define     BitFramingReg         0x0D
-#define     CollReg               0x0E
-#define     Reserved01            0x0F
-//Page 1: Command
-#define     Reserved10            0x10
-#define     ModeReg               0x11
-#define     TxModeReg             0x12
-#define     RxModeReg             0x13
-#define     TxControlReg          0x14
-#define     TxAutoReg             0x15
-#define     TxSelReg              0x16
-#define     RxSelReg              0x17
-#define     RxThresholdReg        0x18
-#define     DemodReg              0x19
-#define     Reserved11            0x1A
-#define     Reserved12            0x1B
-#define     MifareReg             0x1C
-#define     Reserved13            0x1D
-#define     Reserved14            0x1E
-#define     SerialSpeedReg        0x1F
-//Page 2: Configuration
-#define     Reserved20            0x20
-#define     CRCResultRegH         0x21
-#define     CRCResultRegL         0x22
-#define     Reserved21            0x23
-#define     ModWidthReg           0x24
-#define     Reserved22            0x25
-#define     RFCfgReg              0x26
-#define     GsNReg                0x27
-#define     CWGsPReg	          0x28
-#define     ModGsPReg             0x29
-#define     TModeReg              0x2A
-#define     TPrescalerReg         0x2B
-#define     TReloadRegH           0x2C
-#define     TReloadRegL           0x2D
-#define     TCounterValueRegH     0x2E
-#define     TCounterValueRegL     0x2F
-//Page 3: Test Registers
-#define     Reserved30            0x30
-#define     TestSel1Reg           0x31
-#define     TestSel2Reg           0x32
-#define     TestPinEnReg          0x33
-#define     TestPinValueReg       0x34
-#define     TestBusReg            0x35
-#define     AutoTestReg           0x36
-#define     VersionReg            0x37
-#define     AnalogTestReg         0x38
-#define     TestDAC1Reg           0x39
-#define     TestDAC2Reg           0x3A
-#define     TestADCReg            0x3B
-#define     Reserved31            0x3C
-#define     Reserved32            0x3D
-#define     Reserved33            0x3E
-#define     Reserved34			  0x3F
+typedef struct{
+	SPI_HandleTypeDef* spi_handler;
+	GPIO_TypeDef* rst_port;
+	GPIO_TypeDef* cs_port;
+	uint16_t rst_pin;
+	uint16_t cs_pin;
+	uint32_t max_delay;
+}RC522_t;
 
-// Functions for manipulating the MFRC522
-void MFRC522_Init(void);
-uchar MFRC522_Request(uchar reqMode, uchar *TagType);
-uchar MFRC522_Anticoll(uchar *serNum);
-uchar MFRC522_SelectTag(uchar *serNum);
-uchar MFRC522_Auth(uchar authMode, uchar BlockAddr, uchar *Sectorkey, uchar *serNum);
-uchar MFRC522_Write(uchar blockAddr, uchar *writeData);
-uchar MFRC522_Auth(uchar authMode, uchar BlockAddr, uchar *Sectorkey, uchar *serNum);
-uchar MFRC522_Read(uchar blockAddr, uchar *recvData);
-void MFRC522_Halt(void);
+bool _RC522_Init(RC522_t* dev, SPI_HandleTypeDef* hspi, GPIO_TypeDef* cs_port, uint16_t cs_pin, GPIO_TypeDef* rst_port, uint16_t rst_pin, uint32_t max_delay);
+
+uint8_t _RC522_Request(RC522_t* dev, uint8_t reqmode, uint8_t* tagtype);
+
+uint8_t _RC522_Anticoll(RC522_t* dev, uint8_t* psernum);
+
+void _RC522_CalculateCRC(RC522_t* dev, uint8_t* pin, uint8_t sendlen, uint8_t* pout);
+
+uint8_t _RC522_SelectTag(RC522_t* dev, uint8_t* sernum);
+
+uint8_t _RC522_Auth(RC522_t* dev, uint8_t authMode, uint8_t blockAddr, uint8_t* pKey, uint8_t* pSerNum);
+
+uint8_t _RC522_Read(RC522_t* dev, uint8_t blockAddr, uint8_t* recvdata);
+
+uint8_t _RC522_Write(RC522_t* dev, uint8_t blockAddr, uint8_t* writedata);
+
+void _RC522_Halt(RC522_t* dev);
+
+void _RC522_StopCrpyo1(RC522_t* dev);
+
+#endif /* INC_RC522DENEME_H_ */
+
